@@ -269,6 +269,8 @@ Route::middleware(['auth:sanctum','role:teacher'])->prefix('teacher')->group(fun
     Route::put ('/options/{option}',                      [TQuiz::class,'updateOption']);
     Route::delete('/options/{option}',                    [TQuiz::class,'destroyOption']);
 
+    Route::post('/upload/question-image',                 [TQuiz::class,'uploadQuestionImage']);
+
     //    редактирование заданий
     Route::delete('/assignments/{assignment}', [TAssign::class,'destroy']);      // удаление
     Route::get('/paragraphs/{paragraph}/assignment', [TAssign::class,'byParagraph']); // получить задание параграфа (если есть)

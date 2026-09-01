@@ -48,11 +48,12 @@ class QuizController extends Controller
             'max_points'     => $quiz->max_points,
             'questions'      => $questions->map(function($q){
                 return [
-                    'id'       => $q->id,
-                    'type'     => $q->type,
-                    'text'     => $q->text,
-                    'points'   => (int) $q->points,
-                    'position' => (int) $q->position,
+                    'id'        => $q->id,
+                    'type'      => $q->type,
+                    'text'      => $q->text,
+                    'image_url' => $q->image_url,
+                    'points'    => (int) $q->points,
+                    'position'  => (int) $q->position,
                     'options'  => in_array($q->type, ['single','multiple'])
                         ? $q->options->map(fn($o) => [
                             'id'       => $o->id,

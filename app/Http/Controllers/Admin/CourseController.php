@@ -182,6 +182,7 @@ class CourseController extends Controller
                                                 'id' => $question->id,
                                                 'type' => $question->type,
                                                 'text' => $question->text,
+                                                'image_url' => $question->image_url,
                                                 'points' => $question->points,
                                                 'position' => $question->position,
                                                 'options' => $question->options->map(function($option) {

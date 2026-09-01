@@ -10,6 +10,7 @@ use App\Models\QuizOption;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class QuizController extends Controller
 {
@@ -80,17 +81,19 @@ class QuizController extends Controller
     public function addQuestion(Request $r, Quiz $quiz) {
         $this->authorizeQuiz($quiz);
         $data = $r->validate([
-            'type'     => ['required', Rule::in(['single','multiple','text'])],
-            'text'     => 'required|string',
-            'points'   => 'nullable|integer|min:1|max:100',
+            'type'       => ['required', Rule::in(['single','multiple','text'])],
+            'text'       => 'required|string',
+            'points'     => 'nullable|integer|min:1|max:100',
+            'image_path' => 'nullable|string|max:500',
         ]);
         $pos = (int) $quiz->questions()->max('position') + 1;
         $q = QuizQuestion::create([
-            'quiz_id'  => $quiz->id,
-            'type'     => $data['type'],
-            'text'     => $data['text'],
-            'points'   => $data['points'] ?? 1,
-            'position' => $pos,
+            'quiz_id'    => $quiz->id,
+            'type'       => $data['type'],
+            'text'       => $data['text'],
+            'image_path' => $data['image_path'] ?? null,
+            'points'     => $data['points'] ?? 1,
+            'position'   => $pos,
         ]);
         $this->recalculateMaxPoints($quiz);
         return response()->json($q, 201);
@@ -99,9 +102,15 @@ class QuizController extends Controller
     public function updateQuestion(Request $r, QuizQuestion $question) {
         $this->authorizeQuiz($question->quiz);
         $data = $r->validate([
-            'text'   => 'sometimes|required|string',
-            'points' => 'sometimes|integer|min:1|max:100',
+            'text'       => 'sometimes|required|string',
+            'points'     => 'sometimes|integer|min:1|max:100',
+            'image_path' => 'sometimes|nullable|string|max:500',
         ]);
+
+        if (array_key_exists('image_path', $data) && $question->image_path && $data['image_path'] !== $question->image_path) {
+            Storage::disk('public')->delete($question->image_path);
+        }
+
         $question->update($data);
         if (isset($data['points'])) {
             $this->recalculateMaxPoints($question->quiz);
@@ -112,6 +121,9 @@ class QuizController extends Controller
     public function destroyQuestion(Request $r, QuizQuestion $question) {
         $this->authorizeQuiz($question->quiz);
         $quiz = $question->quiz;
+        if ($question->image_path) {
+            Storage::disk('public')->delete($question->image_path);
+        }
         DB::transaction(function() use ($question, $quiz) {
             $question->delete();
             // сжать позиции
@@ -123,6 +135,26 @@ class QuizController extends Controller
         });
         $this->recalculateMaxPoints($quiz);
         return ['message'=>'deleted'];
+    }
+
+    /** Загрузка картинки к вопросу (multipart/form-data) */
+    public function uploadQuestionImage(Request $r) {
+        $r->validate([
+            'file' => ['required','image','mimes:jpg,jpeg,png,webp,gif','max:5120'], // до 5MB
+        ]);
+
+        $user = $r->user();
+        if (!$user || !$user->hasRole('teacher')) {
+            abort(403, 'Only teachers can upload question images');
+        }
+
+        $file = $r->file('file');
+        $path = $file->store('quiz-questions/'.date('Y/m/d'), 'public');
+
+        return response()->json([
+            'path' => $path,
+            'url'  => Storage::disk('public')->url($path),
+        ], 201);
     }
 
     public function addOption(Request $r, QuizQuestion $question) {

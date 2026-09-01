@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class QuizQuestion extends Model
 {
@@ -10,6 +11,7 @@ class QuizQuestion extends Model
         'quiz_id',
         'type',     // 'single' | 'multiple' | 'text'
         'text',
+        'image_path',
         'points',
         'position', // для сортировки
     ];
@@ -18,6 +20,13 @@ class QuizQuestion extends Model
         'points'   => 'integer',
         'position' => 'integer',
     ];
+
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+    }
 
     /** Родительский тест */
     public function quiz()
